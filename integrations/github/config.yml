@@ -1,0 +1,28 @@
+# integrations/github/config.yml
+# Non-secret GitHub integration settings.
+# Secrets (token, owner) are in .env — do not put them here.
+
+api:
+  base_url: https://api.github.com
+  version: "2022-11-28"        # GitHub API version header
+  timeout_seconds: 30
+
+pull_requests:
+  draft: true                  # Open PRs as draft by default
+  delete_branch_on_merge: true
+  labels:
+    - openclaw                  # Applied to all agent-created PRs
+  reviewers: "${GITHUB_PR_REVIEWERS}"  # Comma-separated GitHub usernames e.g. alice,bob
+
+branches:
+  prefix: openclaw/             # All agent branches namespaced e.g. openclaw/fix-thing
+  base: "${GITHUB_DEFAULT_BRANCH}"
+
+commits:
+  author_name: OpenClaw
+  author_email: openclaw@localhost
+
+rate_limiting:
+  respect_retry_after: true
+  max_retries: 3
+  backoff_seconds: 10

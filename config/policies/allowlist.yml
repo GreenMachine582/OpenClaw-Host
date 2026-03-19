@@ -1,0 +1,31 @@
+# config/policies/allowlist.yml
+# Defines what the agent is permitted to do at runtime.
+# Anything not explicitly listed here is denied by default.
+
+commands:
+  - git
+  - pytest
+  - npm test
+  - npm run lint
+  - cargo test
+  - make test
+  - make lint
+
+paths:
+  - sandboxes/repos/
+  - storage/workspace/
+  - storage/sessions/
+
+external:
+  - api.anthropic.com
+  - api.github.com
+
+file_extensions:
+  - .py
+  - .js
+  - .md
+  - .yml
+  - .yaml
+  - .json
+  - .toml
+  - .env.example

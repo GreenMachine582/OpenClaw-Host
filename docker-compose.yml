@@ -1,0 +1,41 @@
+services:
+
+  openclaw:
+    image: openclaw:latest
+    container_name: openclaw
+    restart: unless-stopped
+    env_file:
+      - integrations/anthropic/.env
+      - integrations/github/.env
+    volumes:
+      - ./config:/app/config:ro
+      - ./prompts:/app/prompts:ro
+      - ./integrations:/app/integrations:ro
+      - ./sandboxes:/app/sandboxes
+      - ./storage:/app/storage
+    networks:
+      - openclaw-net
+
+  openclaw-cli:
+    image: openclaw:latest
+    container_name: openclaw-cli
+    profiles:
+      - cli
+    env_file:
+      - integrations/anthropic/.env
+      - integrations/github/.env
+    volumes:
+      - ./config:/app/config:ro
+      - ./prompts:/app/prompts:ro
+      - ./integrations:/app/integrations:ro
+      - ./sandboxes:/app/sandboxes
+      - ./storage:/app/storage
+    networks:
+      - openclaw-net
+    entrypoint: ["openclaw"]
+    stdin_open: true
+    tty: true
+
+networks:
+  openclaw-net:
+    driver: bridge

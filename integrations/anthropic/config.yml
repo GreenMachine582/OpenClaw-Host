@@ -1,0 +1,21 @@
+# integrations/anthropic/config.yml
+# Non-secret Anthropic API settings.
+# Secrets (API key) are in .env — do not put them here.
+
+api:
+  base_url: https://api.anthropic.com
+  version: "2023-06-01"        # Anthropic API version header
+
+model:
+  id: "${ANTHROPIC_MODEL}"
+  max_tokens: "${ANTHROPIC_MAX_TOKENS}"
+  timeout_seconds: "${ANTHROPIC_TIMEOUT}"
+
+  # Sampling parameters
+  temperature: 1               # 0–1; lower = more deterministic
+  top_p: 1                     # Nucleus sampling threshold
+
+rate_limiting:
+  max_retries: 3
+  backoff_seconds: 10
+  respect_retry_after: true

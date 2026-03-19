@@ -1,0 +1,32 @@
+# config/policies/denylist.yml
+# Explicit blocks — checked before the allowlist.
+# Matches here always win regardless of allowlist entries.
+
+commands:
+  - rm -rf /
+  - curl | bash
+  - wget | bash
+  - chmod 777
+  - sudo
+  - su
+
+paths:
+  - /home/
+  - /etc/
+  - /root/
+  - /var/
+  - /usr/
+  - .env                # Prevent reading or writing live secret files
+  - .env.secret
+  - storage/data/       # Task history is read-only to the agent
+  - storage/logs/       # Logs are read-only to the agent
+
+file_extensions:
+  - .pem
+  - .key
+  - .p12
+  - .pfx
+
+external:
+  - metadata.google.internal   # Block cloud metadata endpoints
+  - 169.254.169.254            # AWS/Azure metadata
