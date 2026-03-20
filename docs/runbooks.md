@@ -86,10 +86,22 @@ exit
 
 ## 4. Add a New Repository Sandbox
 
-**Step 1 — Create the sandbox directory:**
+> ⚠️ The `sandboxes/` directory is created by Docker on first run and may be root-owned. Fix permissions before proceeding:
+> ```bash
+> sudo chown -R $USER:$USER sandboxes/
+> ```
+
+**Step 1 — Clone the repo into the sandbox:**
+
+```bash
+make sandbox-clone URL=https://github.com/your-org/<repo-name> NAME=<repo-name>
+```
+
+Or manually:
 
 ```bash
 mkdir -p sandboxes/repos/<repo-name>
+git clone https://github.com/your-org/<repo-name> sandboxes/repos/<repo-name>
 ```
 
 **Step 2 — Add the repo to the allowlist** (`config/policies/allowlist.yml`):
@@ -112,6 +124,12 @@ Expected: `200 OK`. A `403` or `404` means the token lacks access.
 
 ```bash
 docker compose restart openclaw
+```
+
+**List all sandboxes:**
+
+```bash
+make sandbox-list
 ```
 
 ---
