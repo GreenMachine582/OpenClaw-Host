@@ -10,6 +10,7 @@ services:
     env_file:
       - integrations/anthropic/.env
       - integrations/github/.env
+      - integrations/discord/.env
     volumes:
       - ./config:/app/config:ro
       - ./prompts:/app/prompts:ro
@@ -30,6 +31,7 @@ services:
     env_file:
       - integrations/anthropic/.env
       - integrations/github/.env
+      - integrations/discord/.env
     volumes:
       - ./config:/app/config:ro
       - ./prompts:/app/prompts:ro

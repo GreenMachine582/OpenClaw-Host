@@ -19,10 +19,15 @@ paths:
 external:
   - api.anthropic.com
   - api.github.com
+  - discord.com/api
+  - gateway.discord.gg
 
 file_extensions:
   - .py
   - .js
+  - .ts
+  - .go
+  - .rs
   - .md
   - .yml
   - .yaml

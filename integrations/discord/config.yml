@@ -1,0 +1,27 @@
+# integrations/discord/config.yml
+# Non-secret Discord settings.
+# Secrets (bot token, channel ID) are in .env — do not put them here.
+
+bot:
+  status: "Waiting for tasks"          # Bot presence message
+  command_prefix: "/"                  # Slash command prefix
+
+messages:
+  max_length: 1900                     # Discord limit is 2000 — leave headroom
+  truncation_suffix: "…(truncated)"
+  use_embeds: true                     # Use rich embeds for structured output
+
+polls:
+  default_duration_seconds: 300        # 5 minutes
+  min_votes_required: 1
+  options_emoji:
+    - "✅"
+    - "❌"
+    - "🤔"
+
+status:
+  show_agent: true                     # Include agent name in status updates
+  show_timestamp: true
+
+rate_limiting:
+  max_messages_per_minute: 10

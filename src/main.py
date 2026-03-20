@@ -2,18 +2,18 @@
 OpenClaw runtime entrypoint.
 
 Usage:
-    python -m src.main                        # start the long-running runtime
-    python -m src.main run --task "..."       # submit a one-off task
+    python -m src.main                        # start runtime + Discord bot
+    python -m src.main run --task "..."       # submit a one-off task via CLI
     python -m src.main run --task "..." --agent coder
     python -m src.main run --task "..." --dry-run
 """
 
 import argparse
+import asyncio
 import logging
 import os
 import signal
 import sys
-import time
 from pathlib import Path
 
 import anthropic
@@ -25,12 +25,8 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-PROMPTS_DIR = Path("/app/prompts/agents")
 CONFIG_DIR = Path("/app/config")
 INTEGRATIONS_DIR = Path("/app/integrations")
-
-DEFAULT_AGENT = "coder"
-VALID_AGENTS = ["coder", "comms", "repo-manager"]
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -43,14 +39,6 @@ def load_config(path: str | Path) -> dict:
         return yaml.safe_load(f) or {}
 
 
-def load_prompt(agent: str) -> str:
-    path = PROMPTS_DIR / f"{agent}.md"
-    if not path.exists():
-        log.error("Prompt file not found: %s", path)
-        sys.exit(1)
-    return path.read_text()
-
-
 def validate_env() -> bool:
     required = ["ANTHROPIC_API_KEY", "GITHUB_TOKEN", "GITHUB_OWNER"]
     missing = [k for k in required if not os.environ.get(k)]
@@ -60,33 +48,18 @@ def validate_env() -> bool:
     return True
 
 
-def build_context() -> dict:
-    """Resolve runtime context variables injected into agent prompts."""
-    github = load_config(INTEGRATIONS_DIR / "github/config.yml")
-    return {
-        "anthropic.model": os.environ.get("ANTHROPIC_MODEL", "claude-opus-4-6"),
-        "github.branches.prefix": github.get("branches", {}).get("prefix", "openclaw/"),
-        "github.branches.base": os.environ.get("GITHUB_DEFAULT_BRANCH", "main"),
-        "github.commits.author_name": github.get("commits", {}).get("author_name", "OpenClaw"),
-        "github.commits.author_email": github.get("commits", {}).get("author_email", "openclaw@localhost"),
-        "github.pull_requests.draft": github.get("pull_requests", {}).get("draft", True),
-        "github.pull_requests.labels": github.get("pull_requests", {}).get("labels", ["openclaw"]),
-        "github.pull_requests.reviewers": os.environ.get("GITHUB_PR_REVIEWERS", ""),
-    }
+# ── CLI task runner ───────────────────────────────────────────────────────────
 
+def run_cli_task(task: str, agent: str, dry_run: bool = False) -> None:
+    from src.task_router import (
+        VALID_AGENTS,
+        build_context,
+        inject_context,
+        load_prompt,
+    )
 
-def inject_context(prompt: str, context: dict) -> str:
-    """Replace {{variable}} placeholders in a prompt with resolved values."""
-    for key, value in context.items():
-        prompt = prompt.replace("{{" + key + "}}", str(value))
-    return prompt
-
-
-# ── Task runner ───────────────────────────────────────────────────────────────
-
-def run_task(task: str, agent: str, dry_run: bool = False) -> None:
     if agent not in VALID_AGENTS:
-        log.error("Unknown agent '%s'. Valid agents: %s", agent, ", ".join(VALID_AGENTS))
+        log.error("Unknown agent '%s'. Valid: %s", agent, ", ".join(VALID_AGENTS))
         sys.exit(1)
 
     system_prompt = inject_context(load_prompt(agent), build_context())
@@ -122,9 +95,9 @@ def run_task(task: str, agent: str, dry_run: bool = False) -> None:
     log.info("Task complete")
 
 
-# ── Runtime loop ──────────────────────────────────────────────────────────────
+# ── Runtime ───────────────────────────────────────────────────────────────────
 
-def run_runtime() -> None:
+async def run_runtime() -> None:
     log.info("OpenClaw starting...")
 
     if not validate_env():
@@ -132,6 +105,7 @@ def run_runtime() -> None:
 
     load_config(INTEGRATIONS_DIR / "anthropic/config.yml")
     load_config(INTEGRATIONS_DIR / "github/config.yml")
+    load_config(INTEGRATIONS_DIR / "discord/config.yml")
     log.info("Integration config loaded")
 
     load_config(CONFIG_DIR / "policies/allowlist.yml")
@@ -142,19 +116,30 @@ def run_runtime() -> None:
     anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     log.info("Anthropic client initialised (model: %s)", model)
 
-    shutdown = {"flag": False}
+    # Start Discord bot if configured
+    discord_task = None
+    if os.environ.get("DISCORD_BOT_TOKEN") and os.environ.get("DISCORD_CHANNEL_ID"):
+        from src.discord_bot import start_bot
+        discord_task = asyncio.create_task(start_bot())
+        log.info("Discord bot task started")
+    else:
+        log.warning("Discord env vars not set — bot disabled")
 
-    def handle_signal(sig, frame):
+    shutdown = asyncio.Event()
+
+    def handle_signal():
         log.info("Shutdown signal received")
-        shutdown["flag"] = True
+        shutdown.set()
 
-    signal.signal(signal.SIGTERM, handle_signal)
-    signal.signal(signal.SIGINT, handle_signal)
+    loop = asyncio.get_event_loop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, handle_signal)
 
     log.info("OpenClaw runtime ready — waiting for tasks")
+    await shutdown.wait()
 
-    while not shutdown["flag"]:
-        time.sleep(5)
+    if discord_task:
+        discord_task.cancel()
 
     log.info("OpenClaw stopped")
 
@@ -165,13 +150,13 @@ def main():
     parser = argparse.ArgumentParser(prog="openclaw", description="OpenClaw agent runtime")
     sub = parser.add_subparsers(dest="command")
 
-    run_parser = sub.add_parser("run", help="Submit a task to an agent")
+    run_parser = sub.add_parser("run", help="Submit a task via CLI")
     run_parser.add_argument("--task", required=True, help="Task description")
     run_parser.add_argument(
         "--agent",
-        default=DEFAULT_AGENT,
-        choices=VALID_AGENTS,
-        help=f"Agent to use (default: {DEFAULT_AGENT})",
+        default="coder",
+        choices=["coder", "comms", "repo-manager", "discord-handler"],
+        help="Agent to use (default: coder)",
     )
     run_parser.add_argument(
         "--dry-run",
@@ -184,9 +169,9 @@ def main():
     if args.command == "run":
         if not validate_env():
             sys.exit(1)
-        run_task(task=args.task, agent=args.agent, dry_run=args.dry_run)
+        run_cli_task(task=args.task, agent=args.agent, dry_run=args.dry_run)
     else:
-        run_runtime()
+        asyncio.run(run_runtime())
 
 
 if __name__ == "__main__":
