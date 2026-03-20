@@ -86,11 +86,11 @@ class OpenClawBot(discord.Client):
         log.info("Discord bot ready — logged in as %s", self.user)
         await self.change_presence(activity=discord.Game(name="Waiting for tasks"))
 
-    async def get_channel(self) -> discord.TextChannel | None:
-        return self.get_channel(self.channel_id) or await self.fetch_channel(self.channel_id)
+    async def _get_task_channel(self) -> discord.TextChannel | None:
+        return super().get_channel(self.channel_id) or await self.fetch_channel(self.channel_id)
 
     async def post_embed(self, colour: int, title: str, fields: dict) -> discord.Message | None:
-        channel = await self.get_channel()
+        channel = await self._get_task_channel()
         if not channel:
             log.error("Discord channel %d not found", self.channel_id)
             return None
@@ -127,7 +127,7 @@ class OpenClawBot(discord.Client):
 
             # Post result in chunks if needed
             chunks = chunk_text(result)
-            channel = await self.get_channel()
+            channel = await self._get_task_channel()
 
             first = discord.Embed(
                 title="🟢 Task complete",
@@ -146,7 +146,7 @@ class OpenClawBot(discord.Client):
         except Exception as e:
             self._active_tasks.pop(task_id, None)
             log.exception("Task failed: %s", task)
-            channel = await self.get_channel()
+            channel = await self._get_task_channel()
             await channel.send(embed=discord.Embed(
                 title="🔴 Task failed",
                 colour=RED,
@@ -222,7 +222,7 @@ def create_bot() -> OpenClawBot:
         embed.set_footer(text=f"Closes in {duration // 60} minutes")
 
         await interaction.response.defer()
-        channel = await bot.get_channel()
+        channel = await bot._get_task_channel()
         msg = await channel.send(embed=embed)
 
         for emoji in emojis:
