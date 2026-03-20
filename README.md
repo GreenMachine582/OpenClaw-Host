@@ -44,8 +44,8 @@ cp integrations/github/.env.example integrations/github/.env
 
 ```bash
 sudo make build     # Build Docker images
-sudo make up        # Start all services
 sudo make onboard   # First-time setup
+sudo make up        # Start all services
 sudo make logs      # Stream logs
 sudo make cli       # Open a shell in the CLI container
 sudo make down      # Stop all services

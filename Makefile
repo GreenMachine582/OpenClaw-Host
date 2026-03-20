@@ -26,7 +26,7 @@ ps: ## Show service status
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
 cli: ## Open an interactive shell in the CLI container
-	docker compose run --rm --profile cli openclaw-cli sh
+	docker compose --profile cli run --rm openclaw-cli sh
 
 # ── Setup ───────────────────────────────────────────────────────────────────
 
