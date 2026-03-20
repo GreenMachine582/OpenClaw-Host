@@ -43,10 +43,12 @@ cp integrations/github/.env.example integrations/github/.env
 ```
 
 ```bash
-make up        # Start all services
-make onboard   # First-time setup
-make logs      # Stream logs
-make down      # Stop all services
+sudo make build     # Build Docker images
+sudo make up        # Start all services
+sudo make onboard   # First-time setup
+sudo make logs      # Stream logs
+sudo make cli       # Open a shell in the CLI container
+sudo make down      # Stop all services
 ```
 
 ---
