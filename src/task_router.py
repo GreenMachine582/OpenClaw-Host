@@ -186,8 +186,12 @@ def run_pipeline(
             pr_url = _extract_pr_url(output)
             result.steps.append(AgentResult(agent=step_agent, output=output, pr_url=pr_url))
 
-            # Append agent output to conversation so next agent has full context
-            messages.append({"role": "assistant", "content": output})
+            # Pass previous agent output as a user message so the next agent
+            # has full context. The API requires conversations end with a user turn.
+            messages.append({
+                "role": "user",
+                "content": f"Previous step ({step_agent}) output:\n\n{output}\n\nContinue with your part of the pipeline.",
+            })
 
             # Notify Discord only when a PR is opened — a human decision point
             if pr_url and on_pr_opened:
