@@ -38,7 +38,7 @@ services:
       - ./storage:/app/storage
     networks:
       - openclaw-net
-    entrypoint: ["python", "-m", "src.main"]
+    entrypoint: ["/bin/sh"]
     stdin_open: true
     tty: true
 
