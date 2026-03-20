@@ -49,6 +49,13 @@ def chunk_text(text: str, max_len: int = 1900) -> list[str]:
     return chunks
 
 
+def truncate_field(value: str, max_len: int = 1024) -> str:
+    """Truncate a Discord embed field value to the 1024 character limit."""
+    if len(value) <= max_len:
+        return value
+    return value[:max_len - 3] + "…"
+
+
 def is_allowed(user_id: int) -> bool:
     allowed = get_allowed_users()
     return not allowed or user_id in allowed
@@ -96,7 +103,7 @@ class OpenClawBot(discord.Client):
             return None
         embed = discord.Embed(title=title, colour=colour, timestamp=datetime.now(timezone.utc))
         for name, value in fields.items():
-            embed.add_field(name=name, value=value or "—", inline=False)
+            embed.add_field(name=name, value=truncate_field(value or "—"), inline=False)
         return await channel.send(embed=embed)
 
     async def run_task_async(
@@ -114,7 +121,7 @@ class OpenClawBot(discord.Client):
             colour=BLUE,
             timestamp=datetime.now(timezone.utc),
         ).add_field(name="Agent", value=agent, inline=True
-        ).add_field(name="Task", value=task, inline=False
+        ).add_field(name="Task", value=truncate_field(task), inline=False
         ).add_field(name="Status", value="Running...", inline=True))
 
         try:
@@ -134,8 +141,8 @@ class OpenClawBot(discord.Client):
                 colour=GREEN,
                 timestamp=datetime.now(timezone.utc),
             ).add_field(name="Agent", value=agent, inline=True
-            ).add_field(name="Task", value=task, inline=False
-            ).add_field(name="Response", value=chunks[0], inline=False)
+            ).add_field(name="Task", value=truncate_field(task), inline=False
+            ).add_field(name="Response", value=truncate_field(chunks[0]), inline=False)
             await channel.send(embed=first)
 
             for chunk in chunks[1:]:
@@ -152,8 +159,8 @@ class OpenClawBot(discord.Client):
                 colour=RED,
                 timestamp=datetime.now(timezone.utc),
             ).add_field(name="Agent", value=agent, inline=True
-            ).add_field(name="Task", value=task, inline=False
-            ).add_field(name="Reason", value=str(e)[:500], inline=False))
+            ).add_field(name="Task", value=truncate_field(task), inline=False
+            ).add_field(name="Reason", value=truncate_field(str(e)), inline=False))
 
 
 # ── Bot factory ───────────────────────────────────────────────────────────────
@@ -260,7 +267,7 @@ def create_bot() -> OpenClawBot:
         if bot._last_completed:
             desc, ts = bot._last_completed
             elapsed = int(time.time() - ts)
-            last_str = f"{desc} ({elapsed}s ago)"
+            last_str = truncate_field(f"{desc} ({elapsed}s ago)")
         else:
             last_str = "None"
 
