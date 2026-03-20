@@ -56,43 +56,37 @@ def run_cli_task(task: str, agent: str, dry_run: bool = False) -> None:
         build_context,
         inject_context,
         load_prompt,
+        run_pipeline,
     )
 
     if agent not in VALID_AGENTS:
         log.error("Unknown agent '%s'. Valid: %s", agent, ", ".join(VALID_AGENTS))
         sys.exit(1)
 
-    system_prompt = inject_context(load_prompt(agent), build_context())
-
-    print(f"\n── Task ({'dry-run' if dry_run else agent}) ──────────────────────────")
+    print(f"\n── Task ({agent}) ──────────────────────────────────")
     print(task)
     print("────────────────────────────────────────────────\n")
 
     if dry_run:
+        system_prompt = inject_context(load_prompt(agent), build_context())
         print("── System Prompt ────────────────────────────────")
         print(system_prompt)
         print("────────────────────────────────────────────────\n")
         print("[dry-run] No API call made.")
         return
 
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    model = os.environ.get("ANTHROPIC_MODEL", "claude-opus-4-6")
-    max_tokens = int(os.environ.get("ANTHROPIC_MAX_TOKENS", 4096))
+    result = run_pipeline(task=task, agent=agent)
 
-    log.info("Sending task to %s via %s...", agent, model)
+    for step in result.steps:
+        print(f"── {step.agent} ──────────────────────────────────")
+        print(step.output)
+        if step.pr_url:
+            print(f"\nPR: {step.pr_url}")
+        print("────────────────────────────────────────────────\n")
 
-    with client.messages.stream(
-        model=model,
-        max_tokens=max_tokens,
-        system=system_prompt,
-        messages=[{"role": "user", "content": task}],
-    ) as stream:
-        print("── Response ─────────────────────────────────────")
-        for text in stream.text_stream:
-            print(text, end="", flush=True)
-        print("\n────────────────────────────────────────────────\n")
-
-    log.info("Task complete")
+    if not result.success:
+        log.error("Pipeline failed: %s", result.error)
+        sys.exit(1)
 
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
