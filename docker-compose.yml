@@ -1,6 +1,9 @@
 services:
 
   openclaw:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: openclaw:latest
     container_name: openclaw
     restart: unless-stopped
@@ -17,6 +20,9 @@ services:
       - openclaw-net
 
   openclaw-cli:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: openclaw:latest
     container_name: openclaw-cli
     profiles:
@@ -32,7 +38,7 @@ services:
       - ./storage:/app/storage
     networks:
       - openclaw-net
-    entrypoint: ["openclaw"]
+    entrypoint: ["python", "-m", "src.main"]
     stdin_open: true
     tty: true
 

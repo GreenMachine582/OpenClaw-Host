@@ -2,6 +2,12 @@
 
 # ── Core ────────────────────────────────────────────────────────────────────
 
+build: ## Build the Docker image
+	docker compose build
+
+build-nc: ## Build without cache
+	docker compose build --no-cache
+
 up: ## Start the stack
 	docker compose up -d
 
@@ -67,6 +73,6 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*##"}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: up down restart logs ps cli onboard validate health \
+.PHONY: build build-nc up down restart logs ps cli onboard validate health \
         sandbox-list sandbox-clone sandbox-clean sandbox-reset \
         logs-tail logs-errors logs-export logs-prune help
