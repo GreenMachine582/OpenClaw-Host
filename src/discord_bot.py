@@ -70,9 +70,17 @@ class OpenClawBot(discord.Client):
         self._last_completed: tuple[str, float] | None = None
 
     async def setup_hook(self):
-        self.tree.copy_global_to(guild=None)
-        await self.tree.sync()
-        log.info("Discord slash commands synced")
+        guild_id = os.environ.get("DISCORD_GUILD_ID")
+        if guild_id:
+            # Sync to specific guild — instant propagation
+            guild = discord.Object(id=int(guild_id))
+            self.tree.copy_global_to(guild=guild)
+            await self.tree.sync(guild=guild)
+            log.info("Discord slash commands synced to guild %s", guild_id)
+        else:
+            # Global sync — can take up to 1 hour to propagate
+            await self.tree.sync()
+            log.info("Discord slash commands synced globally (may take up to 1 hour)")
 
     async def on_ready(self):
         log.info("Discord bot ready — logged in as %s", self.user)
